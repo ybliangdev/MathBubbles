@@ -37,19 +37,63 @@ async function initAudio() {
     }
 }
 
-function playPopSound() {
+function playSound(type = 'pop') {
     if (!audioCtx || audioCtx.state !== 'running') return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.1);
+
+    if (type === 'pop') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'success') {
+        // Magic Sparkle: 4-note rising arpeggio (C-E-G-C)
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const time = audioCtx.currentTime + (i * 0.06); // Faster timing for sparkle
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, time);
+            gain.gain.setValueAtTime(0.08, time);
+            gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.15);
+        });
+    } else if (type === 'match') {
+        // Power-Up Slide: Frequency glide low to high
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+    } else if (type === 'bomb') {
+        // Low "Boom" sound
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    }
 }
 
 // Colors for bubbles
@@ -222,11 +266,13 @@ function spawnBubble() {
     bubbles.push(newBubble);
 }
 
-function handleVibrate() {
+function handleVibrate(type = 'pop') {
     if (navigator.vibrate) {
-        navigator.vibrate(50);
+        if (type === 'match' || type === 'success') navigator.vibrate([50, 30, 50]);
+        else if (type === 'bomb') navigator.vibrate([100, 50, 100]);
+        else navigator.vibrate(50);
     }
-    playPopSound(); // Sound feedback as fallback for iOS
+    playSound(type); // Sound feedback
 }
 
 function handleClick(e) {
@@ -270,7 +316,7 @@ function handleClick(e) {
             timeLeft = Math.min(timeLeft + 10, 120); // Bonus +10s, max 120s
             timerElement.innerText = timeLeft;
             showFeedback(b.x, b.y, "+10s ⏰");
-            handleVibrate();
+            handleVibrate('success');
             return;
         }
         if (b.type === 'star') {
@@ -278,7 +324,7 @@ function handleClick(e) {
             score += 50;
             scoreElement.innerText = score;
             showFeedback(b.x, b.y, "+50 ⭐");
-            handleVibrate();
+            handleVibrate('success');
             // Star bubbles also slightly increase speed
             gameSpeed += 0.05;
             return;
@@ -288,7 +334,7 @@ function handleClick(e) {
             score = Math.max(0, score - 10);
             scoreElement.innerText = score;
             showFeedback(b.x, b.y, "-10 💣");
-            handleVibrate();
+            handleVibrate('bomb');
             // Clear all other bubbles
             bubbles.forEach(bubble => {
                 if (!bubble.popping) bubble.popping = true;
@@ -319,8 +365,7 @@ function handleClick(e) {
                 });
                 scoreElement.innerText = score;
                 selectedBubbles = [];
-                handleVibrate(); // Double feedback for success
-                setTimeout(() => handleVibrate(), 100);
+                handleVibrate('match'); // Power-Up Slide for math match
 
                 // Increase difficulty
                 gameSpeed += 0.02;
