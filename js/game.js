@@ -80,6 +80,9 @@ class Bubble {
         } else if (this.type === 'star') {
             this.value = '⭐';
             this.color = 'rgba(251, 191, 36, 0.7)'; // Golden
+        } else if (this.type === 'bomb') {
+            this.value = '💣';
+            this.color = 'rgba(239, 68, 68, 0.7)'; // Reddish
         }
 
         this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
@@ -93,13 +96,16 @@ class Bubble {
         ctx.save();
         ctx.globalAlpha = this.opacity;
 
-        // Special Glow for bonus bubbles
+        // Special Glow for bonus/penalty bubbles
         if (this.type === 'time') {
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#22c55e';
         } else if (this.type === 'star') {
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#fbbf24';
+        } else if (this.type === 'bomb') {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ef4444';
         } else {
             ctx.shadowBlur = 15;
             ctx.shadowColor = this.selected ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)';
@@ -196,7 +202,9 @@ function spawnBubble() {
     const rand = Math.random();
     if (rand < 0.02) {
         type = 'star';
-    } else if (rand < 0.07) {
+    } else if (rand < 0.05) {
+        type = 'bomb';
+    } else if (rand < 0.10) {
         type = 'time';
     }
 
@@ -259,9 +267,9 @@ function handleClick(e) {
         // Bonus Bubble Logic: Pop immediately
         if (b.type === 'time') {
             b.popping = true;
-            timeLeft = Math.min(timeLeft + 10, 120); // Bonus +5s, max 120s
+            timeLeft = Math.min(timeLeft + 10, 120); // Bonus +10s, max 120s
             timerElement.innerText = timeLeft;
-            showFeedback(b.x, b.y, "+5s ⏰");
+            showFeedback(b.x, b.y, "+10s ⏰");
             handleVibrate();
             return;
         }
@@ -273,6 +281,18 @@ function handleClick(e) {
             handleVibrate();
             // Star bubbles also slightly increase speed
             gameSpeed += 0.05;
+            return;
+        }
+        if (b.type === 'bomb') {
+            b.popping = true;
+            score = Math.max(0, score - 10);
+            scoreElement.innerText = score;
+            showFeedback(b.x, b.y, "-10 💣");
+            handleVibrate();
+            // Clear all other bubbles
+            bubbles.forEach(bubble => {
+                if (!bubble.popping) bubble.popping = true;
+            });
             return;
         }
 
