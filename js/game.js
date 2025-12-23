@@ -215,7 +215,11 @@ function update(time) {
 }
 
 function updateTarget() {
-    currentTarget = Math.floor(Math.random() * 21) + 10; // 10-30
+    if (score > 100) {
+        currentTarget = Math.floor(Math.random() * 31) + 30; // 30-60
+    } else {
+        currentTarget = Math.floor(Math.random() * 21) + 10; // 10-30
+    }
     targetElement.innerText = currentTarget;
 
     // Pulse animation for target change
