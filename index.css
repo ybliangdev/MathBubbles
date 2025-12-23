@@ -32,6 +32,7 @@ body {
     max-width: 500px;
     background: rgba(15, 23, 42, 0.5);
     overflow: hidden;
+    touch-action: none;
 }
 
 #game-canvas {

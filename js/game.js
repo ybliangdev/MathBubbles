@@ -1,12 +1,3 @@
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
-const scoreElement = document.getElementById('score');
-const finalScoreElement = document.getElementById('final-score');
-const startScreen = document.getElementById('start-screen');
-const gameOverScreen = document.getElementById('game-over-screen');
-const startBtn = document.getElementById('start-btn');
-const restartBtn = document.getElementById('restart-btn');
-
 let score = 0;
 let currentTarget = 10;
 let gameActive = false;
@@ -18,8 +9,40 @@ let gameSpeed = 1;
 let timeLeft = 60;
 let lastTimeUpdate = 0;
 
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
+const finalScoreElement = document.getElementById('final-score');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+
 const targetElement = document.getElementById('target');
 const timerElement = document.getElementById('timer');
+
+// Audio Context for Haptic Fallback (iOS)
+let audioCtx;
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function playPopSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+}
 
 // Colors for bubbles
 const colors = [
@@ -32,13 +55,17 @@ const colors = [
 
 class Bubble {
     constructor() {
+        // Use logical dimensions for spawning
+        const logicalWidth = canvas.offsetWidth;
+        const logicalHeight = canvas.offsetHeight;
+
         this.radius = Math.random() * 20 + 35; // Size 35-55
-        this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
-        this.y = canvas.height + this.radius;
+        this.x = Math.random() * (logicalWidth - this.radius * 2) + this.radius;
+        this.y = logicalHeight + this.radius;
         // Ensure values are within a range that makes sense for the current target
         this.value = Math.floor(Math.random() * (currentTarget - 1)) + 1;
-        // Reduce speed by 1/3 (making it 2/3 of original)
-        this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed * 0.66;
+        // Reverted to normal speed (removed 0.66)
+        this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
         this.color = colors[Math.floor(Math.random() * colors.length)];
         this.selected = false;
         this.popping = false;
@@ -95,14 +122,17 @@ class Bubble {
     }
 
     isClicked(mx, my) {
+        // Added 20px hit margin to make it easier to tap on small screens
         const dist = Math.sqrt((mx - this.x) ** 2 + (my - this.y) ** 2);
-        return dist < this.radius;
+        return dist < (this.radius + 20);
     }
 }
 
 function resize() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
 }
 
 window.addEventListener('resize', resize);
@@ -116,14 +146,23 @@ function handleVibrate() {
     if (navigator.vibrate) {
         navigator.vibrate(50);
     }
+    playPopSound(); // Sound feedback as fallback for iOS
 }
 
 function handleClick(e) {
     if (!gameActive) return;
 
+    // Prevent default to avoid double events on mobile
+    if (e.type === 'touchstart') {
+        initAudio(); // Initialize audio on first user touch
+    }
+
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches[0].clientX) - rect.left;
-    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
     for (let i = bubbles.length - 1; i >= 0; i--) {
         const b = bubbles[i];
@@ -169,11 +208,15 @@ function handleClick(e) {
 }
 
 canvas.addEventListener('mousedown', handleClick);
-canvas.addEventListener('touchstart', handleClick);
+canvas.addEventListener('touchstart', (e) => {
+    handleClick(e);
+    e.preventDefault();
+}, { passive: false });
 
 function update(time) {
     if (!gameActive) return;
 
+    // Use physical dimensions for clearing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (time - lastSpawn > spawnRate) {
