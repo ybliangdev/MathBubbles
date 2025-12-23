@@ -8,12 +8,15 @@ const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 
 let score = 0;
+let currentTarget = 10;
 let gameActive = false;
 let bubbles = [];
 let selectedBubbles = [];
 let spawnRate = 1500; // ms
 let lastSpawn = 0;
 let gameSpeed = 1;
+
+const targetElement = document.getElementById('target');
 
 // Colors for bubbles
 const colors = [
@@ -29,7 +32,8 @@ class Bubble {
         this.radius = Math.random() * 20 + 35; // Size 35-55
         this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
         this.y = canvas.height + this.radius;
-        this.value = Math.floor(Math.random() * 9) + 1; // 1-9
+        // Ensure values are within a range that makes sense for the current target
+        this.value = Math.floor(Math.random() * (currentTarget - 1)) + 1;
         this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
         this.color = colors[Math.floor(Math.random() * colors.length)];
         this.selected = false;
@@ -131,7 +135,7 @@ function handleClick(e) {
 
             if (selectedBubbles.length === 2) {
                 const sum = selectedBubbles[0].value + selectedBubbles[1].value;
-                if (sum === 10) {
+                if (sum === currentTarget) {
                     // Correct!
                     selectedBubbles.forEach(sb => {
                         sb.popping = true;
@@ -144,6 +148,11 @@ function handleClick(e) {
 
                     // Increase difficulty
                     gameSpeed += 0.02;
+
+                    // Randomly change target every 50 points to keep it fresh
+                    if (score % 50 === 0) {
+                        updateTarget();
+                    }
                 } else {
                     // Wrong! Deselect
                     setTimeout(() => {
@@ -191,6 +200,17 @@ function update(time) {
     requestAnimationFrame(update);
 }
 
+function updateTarget() {
+    currentTarget = Math.floor(Math.random() * 41) + 10; // 10-50
+    targetElement.innerText = currentTarget;
+
+    // Pulse animation for target change
+    targetElement.parentElement.classList.add('target-pulse');
+    setTimeout(() => {
+        targetElement.parentElement.classList.remove('target-pulse');
+    }, 500);
+}
+
 function startGame() {
     score = 0;
     gameSpeed = 1;
@@ -198,6 +218,7 @@ function startGame() {
     bubbles = [];
     selectedBubbles = [];
     scoreElement.innerText = score;
+    updateTarget();
     gameActive = true;
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
