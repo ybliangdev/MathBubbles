@@ -62,19 +62,27 @@ const colors = [
 ];
 
 class Bubble {
-    constructor() {
-        // Use logical dimensions for spawning
+    constructor(type = 'number') {
         const logicalWidth = canvas.offsetWidth;
         const logicalHeight = canvas.offsetHeight;
 
+        this.type = type; // 'number', 'time', 'star'
         this.radius = Math.random() * 20 + 35; // Size 35-55
         this.x = Math.random() * (logicalWidth - this.radius * 2) + this.radius;
         this.y = logicalHeight + this.radius;
-        // Ensure values are within a range that makes sense for the current target
-        this.value = Math.floor(Math.random() * (currentTarget - 1)) + 1;
-        // Reverted to normal speed (removed 0.66)
+
+        if (this.type === 'number') {
+            this.value = Math.floor(Math.random() * (currentTarget - 1)) + 1;
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+        } else if (this.type === 'time') {
+            this.value = '⏰';
+            this.color = 'rgba(34, 197, 94, 0.7)'; // Greenish
+        } else if (this.type === 'star') {
+            this.value = '⭐';
+            this.color = 'rgba(251, 191, 36, 0.7)'; // Golden
+        }
+
         this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
         this.selected = false;
         this.popping = false;
         this.popScale = 1;
@@ -85,9 +93,17 @@ class Bubble {
         ctx.save();
         ctx.globalAlpha = this.opacity;
 
-        // Shadow/Glow
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = this.selected ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)';
+        // Special Glow for bonus bubbles
+        if (this.type === 'time') {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#22c55e';
+        } else if (this.type === 'star') {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fbbf24';
+        } else {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = this.selected ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)';
+        }
 
         // Inner Gradient
         const gradient = ctx.createRadialGradient(
@@ -107,9 +123,10 @@ class Bubble {
         ctx.lineWidth = this.selected ? 4 : 2;
         ctx.stroke();
 
-        // Text
+        // Text / Icon
         ctx.fillStyle = 'white';
-        ctx.font = `bold ${this.radius * 0.8}px Outfit`;
+        const fontSize = this.type === 'number' ? this.radius * 0.8 : this.radius * 1.0;
+        ctx.font = `bold ${fontSize}px Outfit`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.value, this.x, this.y);
@@ -175,7 +192,15 @@ resize();
 
 function spawnBubble() {
     const logicalWidth = canvas.offsetWidth;
-    const newBubble = new Bubble();
+    let type = 'number';
+    const rand = Math.random();
+    if (rand < 0.02) {
+        type = 'star';
+    } else if (rand < 0.07) {
+        type = 'time';
+    }
+
+    const newBubble = new Bubble(type);
 
     // Simple anti-overlap on spawn: if too close to last few bubbles, nudge it
     const lastFew = bubbles.slice(-3);
@@ -230,6 +255,27 @@ function handleClick(e) {
 
     if (closestBubble) {
         const b = closestBubble;
+
+        // Bonus Bubble Logic: Pop immediately
+        if (b.type === 'time') {
+            b.popping = true;
+            timeLeft = Math.min(timeLeft + 10, 120); // Bonus +5s, max 120s
+            timerElement.innerText = timeLeft;
+            showFeedback(b.x, b.y, "+5s ⏰");
+            handleVibrate();
+            return;
+        }
+        if (b.type === 'star') {
+            b.popping = true;
+            score += 50;
+            scoreElement.innerText = score;
+            showFeedback(b.x, b.y, "+50 ⭐");
+            handleVibrate();
+            // Star bubbles also slightly increase speed
+            gameSpeed += 0.05;
+            return;
+        }
+
         if (b.selected) {
             b.selected = false;
             selectedBubbles = selectedBubbles.filter(sb => sb !== b);
@@ -278,8 +324,8 @@ canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
 }, { passive: false });
 
-function showFeedback(x, y) {
-    const msg = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
+function showFeedback(x, y, customMsg = null) {
+    const msg = customMsg || feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
     indicators.push(new Indicator(x, y, msg));
 }
 
