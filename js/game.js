@@ -250,7 +250,43 @@ function startGame() {
 function endGame() {
     gameActive = false;
     finalScoreElement.innerText = score;
+    saveScore(score);
+    updateHistoryUI();
     gameOverScreen.classList.remove('hidden');
+}
+
+function saveScore(newScore) {
+    let history = JSON.parse(localStorage.getItem('math_bubble_scores')) || [];
+    const entry = {
+        score: newScore,
+        date: new Date().toLocaleString()
+    };
+    history.unshift(entry);
+    // Keep only last 100
+    if (history.length > 100) history = history.slice(0, 100);
+    localStorage.setItem('math_bubble_scores', JSON.stringify(history));
+}
+
+function updateHistoryUI() {
+    const list = document.getElementById('history-list');
+    const highScoreElement = document.getElementById('high-score');
+    const history = JSON.parse(localStorage.getItem('math_bubble_scores')) || [];
+    list.innerHTML = '';
+
+    // Calculate High Score
+    if (history.length > 0) {
+        const highScore = Math.max(...history.map(h => h.score));
+        highScoreElement.innerText = highScore;
+    } else {
+        highScoreElement.innerText = '0';
+    }
+
+    // Show top 10 on the UI to keep it clean, though 100 are saved
+    history.slice(0, 10).forEach(entry => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${entry.date}</span> <b>${entry.score}</b>`;
+        list.appendChild(li);
+    });
 }
 
 startBtn.addEventListener('click', startGame);

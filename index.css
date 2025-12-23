@@ -128,6 +128,64 @@ button:active {
     display: none !important;
 }
 
+#history-container {
+    width: 100%;
+    max-width: 320px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    max-height: 250px;
+    overflow-y: auto;
+    position: relative;
+}
+
+#high-score-banner {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #451a03;
+    font-weight: 800;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+    animation: shine 2s infinite alternate ease-in-out;
+}
+
+@keyframes shine {
+    from {
+        filter: brightness(1) scale(1);
+    }
+
+    to {
+        filter: brightness(1.2) scale(1.05);
+    }
+}
+
+#history-container h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: #fbbf24;
+}
+
+#history-list {
+    list-style: none;
+    padding: 0;
+}
+
+#history-list li {
+    font-size: 1rem;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+}
+
+#history-list li:last-child {
+    border-bottom: none;
+}
+
 /* Bubble Animations */
 @keyframes pop {
     0% {
