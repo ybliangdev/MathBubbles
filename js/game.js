@@ -37,7 +37,8 @@ class Bubble {
         this.y = canvas.height + this.radius;
         // Ensure values are within a range that makes sense for the current target
         this.value = Math.floor(Math.random() * (currentTarget - 1)) + 1;
-        this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
+        // Reduce speed by 1/3 (making it 2/3 of original)
+        this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed * 0.66;
         this.color = colors[Math.floor(Math.random() * colors.length)];
         this.selected = false;
         this.popping = false;
@@ -217,7 +218,7 @@ function update(time) {
 }
 
 function updateTarget() {
-    currentTarget = Math.floor(Math.random() * 41) + 10; // 10-50
+    currentTarget = Math.floor(Math.random() * 21) + 10; // 10-30
     targetElement.innerText = currentTarget;
 
     // Pulse animation for target change
