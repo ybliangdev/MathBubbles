@@ -9,6 +9,9 @@ let lastSpawn = 0;
 let gameSpeed = 1;
 let timeLeft = 60;
 let lastTimeUpdate = 0;
+let indicators = [];
+
+const feedbackMessages = ["Good job!", "Great!", "Perfect!", "Fantastic!", "Amazing!", "Well done!"];
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -133,6 +136,33 @@ class Bubble {
     }
 }
 
+class Indicator {
+    constructor(x, y, text) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.opacity = 1;
+        this.speedy = -1.5;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 24px Outfit';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.restore();
+    }
+
+    update() {
+        this.y += this.speedy;
+        this.opacity -= 0.02;
+    }
+}
+
 function resize() {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = canvas.offsetWidth * dpr;
@@ -213,6 +243,10 @@ function handleClick(e) {
             const sum = selectedBubbles[0].value + selectedBubbles[1].value;
             if (sum === currentTarget) {
                 // Correct!
+                const midX = (selectedBubbles[0].x + selectedBubbles[1].x) / 2;
+                const midY = (selectedBubbles[0].y + selectedBubbles[1].y) / 2;
+                showFeedback(midX, midY);
+
                 selectedBubbles.forEach(sb => {
                     sb.popping = true;
                     score += 10;
@@ -244,6 +278,11 @@ canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
 }, { passive: false });
 
+function showFeedback(x, y) {
+    const msg = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
+    indicators.push(new Indicator(x, y, msg));
+}
+
 function update(time) {
     if (!gameActive) return;
 
@@ -271,6 +310,16 @@ function update(time) {
         // Remove popped or off-screen
         if (b.opacity <= 0) {
             bubbles.splice(i, 1);
+        }
+    }
+
+    // Update and Draw Indicators
+    for (let i = indicators.length - 1; i >= 0; i--) {
+        const ind = indicators[i];
+        ind.update();
+        ind.draw();
+        if (ind.opacity <= 0) {
+            indicators.splice(i, 1);
         }
     }
 
@@ -315,6 +364,7 @@ function startGame() {
     spawnRate = 1500;
     bubbles = [];
     selectedBubbles = [];
+    indicators = [];
     scoreElement.innerText = score;
     timerElement.innerText = timeLeft;
     updateTarget();
