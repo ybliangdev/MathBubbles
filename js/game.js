@@ -1,3 +1,4 @@
+let gameMode = 'normal'; // 'normal' or 'easy'
 let score = 0;
 let currentTarget = 10;
 let gameActive = false;
@@ -16,6 +17,7 @@ const finalScoreElement = document.getElementById('final-score');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const startBtn = document.getElementById('start-btn');
+const easyBtn = document.getElementById('easy-btn');
 const restartBtn = document.getElementById('restart-btn');
 
 const targetElement = document.getElementById('target');
@@ -287,10 +289,14 @@ function update(time) {
 }
 
 function updateTarget() {
-    if (score > 100) {
-        currentTarget = Math.floor(Math.random() * 31) + 30; // 30-60
+    if (gameMode === 'easy') {
+        currentTarget = Math.floor(Math.random() * 7) + 10; // 10-16
     } else {
-        currentTarget = Math.floor(Math.random() * 21) + 10; // 10-30
+        if (score > 100) {
+            currentTarget = Math.floor(Math.random() * 31) + 30; // 30-60
+        } else {
+            currentTarget = Math.floor(Math.random() * 21) + 10; // 10-30
+        }
     }
     targetElement.innerText = currentTarget;
 
@@ -362,5 +368,14 @@ function updateHistoryUI() {
     });
 }
 
-startBtn.addEventListener('click', startGame);
+startBtn.addEventListener('click', () => {
+    gameMode = 'normal';
+    startGame();
+});
+
+easyBtn.addEventListener('click', () => {
+    gameMode = 'easy';
+    startGame();
+});
+
 restartBtn.addEventListener('click', startGame);
