@@ -23,14 +23,17 @@ const timerElement = document.getElementById('timer');
 
 // Audio Context for Haptic Fallback (iOS)
 let audioCtx;
-function initAudio() {
+async function initAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
     }
 }
 
 function playPopSound() {
-    if (!audioCtx) return;
+    if (!audioCtx || audioCtx.state !== 'running') return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
@@ -139,7 +142,19 @@ window.addEventListener('resize', resize);
 resize();
 
 function spawnBubble() {
-    bubbles.push(new Bubble());
+    const logicalWidth = canvas.offsetWidth;
+    const newBubble = new Bubble();
+
+    // Simple anti-overlap on spawn: if too close to last few bubbles, nudge it
+    const lastFew = bubbles.slice(-3);
+    for (const b of lastFew) {
+        const dist = Math.abs(newBubble.x - b.x);
+        if (dist < 80) { // Nudge if centers are closer than 80px
+            newBubble.x = (newBubble.x + 100) % (logicalWidth - newBubble.radius * 2) + newBubble.radius;
+        }
+    }
+
+    bubbles.push(newBubble);
 }
 
 function handleVibrate() {
@@ -164,45 +179,59 @@ function handleClick(e) {
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
+    let closestBubble = null;
+    let minDist = Infinity;
+
     for (let i = bubbles.length - 1; i >= 0; i--) {
         const b = bubbles[i];
-        if (b.isClicked(x, y) && !b.popping) {
-            if (b.selected) {
-                b.selected = false;
-                selectedBubbles = selectedBubbles.filter(sb => sb !== b);
-            } else {
-                b.selected = true;
-                selectedBubbles.push(b);
-                handleVibrate();
-            }
-
-            if (selectedBubbles.length === 2) {
-                const sum = selectedBubbles[0].value + selectedBubbles[1].value;
-                if (sum === currentTarget) {
-                    // Correct!
-                    selectedBubbles.forEach(sb => {
-                        sb.popping = true;
-                        score += 10;
-                    });
-                    scoreElement.innerText = score;
-                    selectedBubbles = [];
-                    handleVibrate(); // Double vibrate for success?
-                    setTimeout(() => handleVibrate(), 100);
-
-                    // Increase difficulty
-                    gameSpeed += 0.02;
-
-                    // Change target on every match
-                    updateTarget();
-                } else {
-                    // Wrong! Deselect
-                    setTimeout(() => {
-                        selectedBubbles.forEach(sb => sb.selected = false);
-                        selectedBubbles = [];
-                    }, 200);
+        if (!b.popping) {
+            const dist = Math.sqrt((x - b.x) ** 2 + (y - b.y) ** 2);
+            // Check if within hit range (radius + 20px margin)
+            if (dist < (b.radius + 20)) {
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestBubble = b;
                 }
             }
-            break;
+        }
+    }
+
+    if (closestBubble) {
+        const b = closestBubble;
+        if (b.selected) {
+            b.selected = false;
+            selectedBubbles = selectedBubbles.filter(sb => sb !== b);
+        } else {
+            b.selected = true;
+            selectedBubbles.push(b);
+            handleVibrate();
+        }
+
+        if (selectedBubbles.length === 2) {
+            const sum = selectedBubbles[0].value + selectedBubbles[1].value;
+            if (sum === currentTarget) {
+                // Correct!
+                selectedBubbles.forEach(sb => {
+                    sb.popping = true;
+                    score += 10;
+                });
+                scoreElement.innerText = score;
+                selectedBubbles = [];
+                handleVibrate(); // Double feedback for success
+                setTimeout(() => handleVibrate(), 100);
+
+                // Increase difficulty
+                gameSpeed += 0.02;
+
+                // Change target on every match
+                updateTarget();
+            } else {
+                // Wrong! Deselect
+                setTimeout(() => {
+                    selectedBubbles.forEach(sb => sb.selected = false);
+                    selectedBubbles = [];
+                }, 200);
+            }
         }
     }
 }
@@ -273,6 +302,7 @@ function updateTarget() {
 }
 
 function startGame() {
+    initAudio(); // Unlock audio on game start
     score = 0;
     timeLeft = 60;
     gameSpeed = 1;
