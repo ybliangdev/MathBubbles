@@ -52,13 +52,14 @@ body {
 }
 
 #score-board,
-#target-board {
+#target-board,
+#timer-board {
     background: var(--glass);
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
-    padding: 10px 20px;
+    padding: 8px 15px;
     border-radius: 20px;
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     font-weight: 600;
 }
 

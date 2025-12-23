@@ -15,8 +15,11 @@ let selectedBubbles = [];
 let spawnRate = 1500; // ms
 let lastSpawn = 0;
 let gameSpeed = 1;
+let timeLeft = 60;
+let lastTimeUpdate = 0;
 
 const targetElement = document.getElementById('target');
+const timerElement = document.getElementById('timer');
 
 // Colors for bubbles
 const colors = [
@@ -186,14 +189,27 @@ function update(time) {
         b.update();
         b.draw();
 
-        // Game Over condition: if bubble hits top (y < -radius)
+        // If bubble hits top, change target instead of ending game
         if (b.y < -b.radius && !b.popping) {
-            endGame();
+            updateTarget();
+            b.popping = true; // Effectively remove it
+            handleVibrate();
         }
 
         // Remove popped or off-screen
         if (b.opacity <= 0) {
             bubbles.splice(i, 1);
+        }
+    }
+
+    // Timer Update - outside bubble loop
+    if (time - lastTimeUpdate >= 1000) {
+        timeLeft--;
+        timerElement.innerText = timeLeft;
+        lastTimeUpdate = time;
+        if (timeLeft <= 0) {
+            endGame();
+            return;
         }
     }
 
@@ -213,16 +229,19 @@ function updateTarget() {
 
 function startGame() {
     score = 0;
+    timeLeft = 60;
     gameSpeed = 1;
     spawnRate = 1500;
     bubbles = [];
     selectedBubbles = [];
     scoreElement.innerText = score;
+    timerElement.innerText = timeLeft;
     updateTarget();
     gameActive = true;
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
     lastSpawn = performance.now();
+    lastTimeUpdate = performance.now();
     requestAnimationFrame(update);
 }
 
