@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math BubblePop</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-layer">
+            <div id="score-board">Score: <span id="score">0</span></div>
+            <div id="target-board">Target: <span id="target">10</span></div>
+        </div>
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="start-screen" class="overlay">
+            <h1>Math BubblePop</h1>
+            <p>Tap two numbers that add up to <b>10</b>!</p>
+            <button id="start-btn">Start Game</button>
+        </div>
+
+        <div id="game-over-screen" class="overlay hidden">
+            <h1>Game Over</h1>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="restart-btn">Try Again</button>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('SW registered!', reg);
+                }).catch(err => {
+                    console.log('SW registration failed!', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
