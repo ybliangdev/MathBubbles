@@ -153,10 +153,8 @@ function handleClick(e) {
                     // Increase difficulty
                     gameSpeed += 0.02;
 
-                    // Randomly change target every 50 points to keep it fresh
-                    if (score % 50 === 0) {
-                        updateTarget();
-                    }
+                    // Change target on every match
+                    updateTarget();
                 } else {
                     // Wrong! Deselect
                     setTimeout(() => {
@@ -190,10 +188,9 @@ function update(time) {
         b.update();
         b.draw();
 
-        // If bubble hits top, change target instead of ending game
+        // If bubble hits top, just remove it. Target stays until matched.
         if (b.y < -b.radius && !b.popping) {
-            updateTarget();
-            b.popping = true; // Effectively remove it
+            b.popping = true;
             handleVibrate();
         }
 
