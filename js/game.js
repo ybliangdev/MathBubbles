@@ -9,11 +9,13 @@ let lastSpawn = 0;
 let gameSpeed = 1;
 let gamePaused = false;
 let lastTimeUpdate = 0;
+let lastUpdateTime = 0;
 let indicators = [];
 let currentLevel = 1;
 let matchesToNextLevel = 0;
 let timeLeft = 60;
 let timerMatches = 0;
+let slowEffectTimer = 0; // ms
 
 const feedbackMessages = ["Good job!", "Great!", "Perfect!", "Fantastic!", "Amazing!", "Well done!"];
 
@@ -137,6 +139,9 @@ class Bubble {
         } else if (this.type === 'bomb') {
             this.value = '💣';
             this.color = 'rgba(239, 68, 68, 0.7)'; // Reddish
+        } else if (this.type === 'slow') {
+            this.value = '❄️';
+            this.color = 'rgba(6, 182, 212, 0.7)'; // Cyan
         }
 
         this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
@@ -160,6 +165,9 @@ class Bubble {
         } else if (this.type === 'bomb') {
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#ef4444';
+        } else if (this.type === 'slow') {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#06b6d4';
         } else {
             ctx.shadowBlur = 15;
             ctx.shadowColor = this.selected ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)';
@@ -200,7 +208,8 @@ class Bubble {
             this.opacity -= 0.1;
             return;
         }
-        this.y -= this.speed;
+        const speedMultiplier = (slowEffectTimer > 0) ? (2 / 3) : 1;
+        this.y -= this.speed * speedMultiplier;
 
         // Wobble effect
         this.x += Math.sin(this.y * 0.05) * 0.5;
@@ -262,6 +271,8 @@ function spawnBubble() {
         type = 'bomb';
     } else if (rand < 0.10) {
         type = 'time';
+    } else if (rand < 0.14) {
+        type = 'slow';
     } else {
         // 50% chance to spawn a guaranteed match if target is high
         if (Math.random() < 0.5 && bubbles.length > 0) {
@@ -356,6 +367,13 @@ function handleClick(e) {
             gameSpeed += 0.05;
             return;
         }
+        if (b.type === 'slow') {
+            b.popping = true;
+            slowEffectTimer = 20000; // 20 seconds
+            showFeedback(b.x, b.y, "Slow Down! ❄️");
+            handleVibrate('success');
+            return;
+        }
         if (b.type === 'bomb') {
             b.popping = true;
             score = Math.max(0, score - 10);
@@ -446,6 +464,18 @@ function update(time) {
         lastSpawn = time - (lastSpawn ? (time - lastSpawn) : 0); // Keep spawn timing consistent
         requestAnimationFrame(update);
         return;
+    }
+
+    const deltaTime = time - (lastUpdateTime || time);
+    lastUpdateTime = time;
+    if (slowEffectTimer > 0) {
+        slowEffectTimer -= deltaTime;
+        if (slowEffectTimer <= 0) {
+            slowEffectTimer = 0;
+            gameContainer.classList.remove('slowed-active');
+        } else {
+            gameContainer.classList.add('slowed-active');
+        }
     }
 
     // Use physical dimensions for clearing
@@ -539,7 +569,7 @@ function updateTarget() {
         // Timer Mode
         if (typeof window.timerTotalMatches === 'undefined') window.timerTotalMatches = 0;
         const increments = Math.floor(window.timerTotalMatches / 4);
-        const step = score > 150 ? 15 : 10;
+        const step = score > 150 ? 15 : 6;
         min = 10 + (increments * step);
         max = 20 + (increments * step);
     }
