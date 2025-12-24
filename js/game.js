@@ -10,6 +10,8 @@ let gameSpeed = 1;
 let timeLeft = 60;
 let lastTimeUpdate = 0;
 let indicators = [];
+let currentLevel = 1;
+let matchesToNextLevel = 0;
 
 const feedbackMessages = ["Good job!", "Great!", "Perfect!", "Fantastic!", "Amazing!", "Well done!"];
 
@@ -27,6 +29,8 @@ const exitBtn = document.getElementById('exit-btn');
 
 const targetElement = document.getElementById('target');
 const timerElement = document.getElementById('timer');
+const bgLevel = document.getElementById('bg-level');
+const gameContainer = document.getElementById('game-container');
 
 // Audio Context for Haptic Fallback (iOS)
 let audioCtx;
@@ -380,6 +384,17 @@ function handleClick(e) {
                 selectedBubbles = [];
                 handleVibrate('match'); // Power-Up Slide for math match
 
+                // Level Progression for Easy Mode
+                if (gameMode === 'easy') {
+                    matchesToNextLevel++;
+                    if (matchesToNextLevel >= 5 && currentLevel < 12) {
+                        currentLevel++;
+                        matchesToNextLevel = 0;
+                        updateBGColor();
+                        bgLevel.innerText = `L${currentLevel}`;
+                    }
+                }
+
                 // Increase difficulty
                 gameSpeed += 0.02;
 
@@ -467,7 +482,12 @@ function update(time) {
 
 function updateTarget() {
     if (gameMode === 'easy') {
-        currentTarget = Math.floor(Math.random() * 7) + 10; // 10-16
+        const ranges = [
+            [6, 12], [10, 20], [20, 25], [25, 30], [30, 35], [35, 40],
+            [40, 45], [45, 50], [50, 55], [55, 60], [60, 65], [65, 70]
+        ];
+        const [min, max] = ranges[currentLevel - 1] || [10, 16];
+        currentTarget = Math.floor(Math.random() * (max - min + 1)) + min;
     } else if (gameMode === 'hard') {
         currentTarget = Math.floor(Math.random() * 71) + 30; // 30-100
     } else {
@@ -490,6 +510,8 @@ function startGame() {
     initAudio(); // Unlock audio on game start
     score = 0;
     timeLeft = 60;
+    currentLevel = 1;
+    matchesToNextLevel = 0;
     gameSpeed = gameMode === 'hard' ? 1.5 : 1;
     spawnRate = 1500;
     bubbles = [];
@@ -497,6 +519,15 @@ function startGame() {
     indicators = [];
     scoreElement.innerText = score;
     timerElement.innerText = timeLeft;
+
+    if (gameMode === 'easy') {
+        bgLevel.classList.add('visible');
+        bgLevel.innerText = `L${currentLevel}`;
+    } else {
+        bgLevel.classList.remove('visible');
+    }
+    updateBGColor();
+
     updateTarget();
     gameActive = true;
     startScreen.classList.add('hidden');
@@ -577,3 +608,14 @@ exitBtn.addEventListener('click', () => {
     // Physical dimensions for clearing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
+
+function updateBGColor() {
+    if (gameMode === 'easy') {
+        // Shift from Blue/Indigo to Red as level increases
+        // L1 (Indigo/Blue): h=230, L12 (Red): h=0
+        const hue = Math.max(0, 230 - (currentLevel - 1) * 21);
+        gameContainer.style.background = `radial-gradient(circle at top right, hsl(${hue}, 40%, 30%), #0f172a)`;
+    } else {
+        gameContainer.style.background = `radial-gradient(circle at top right, #1e293b, #0f172a)`;
+    }
+}
