@@ -44,12 +44,23 @@ body {
 #ui-layer {
     position: absolute;
     top: 20px;
-    left: 20px;
-    right: 20px;
+    left: 15px;
+    right: 15px;
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     pointer-events: none;
     z-index: 10;
+}
+
+#ui-layer * {
+    pointer-events: auto;
+}
+
+.ui-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 #score-board,
@@ -138,6 +149,24 @@ button {
     background: linear-gradient(135deg, #f59e0b, #dc2626);
     /* Orange/Red for Hard */
     box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+}
+
+#exit-btn {
+    background: rgba(239, 68, 68, 0.3);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: 12px;
+    width: auto;
+    box-shadow: none;
+}
+
+#exit-btn:hover {
+    background: rgba(239, 68, 68, 0.5);
+    transform: none;
 }
 
 button:hover {

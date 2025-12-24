@@ -23,6 +23,7 @@ const startBtn = document.getElementById('start-btn');
 const easyBtn = document.getElementById('easy-btn');
 const hardBtn = document.getElementById('hard-btn');
 const restartBtn = document.getElementById('restart-btn');
+const exitBtn = document.getElementById('exit-btn');
 
 const targetElement = document.getElementById('target');
 const timerElement = document.getElementById('timer');
@@ -563,3 +564,16 @@ hardBtn.addEventListener('click', () => {
 });
 
 restartBtn.addEventListener('click', startGame);
+
+exitBtn.addEventListener('click', () => {
+    gameActive = false;
+    startScreen.classList.remove('hidden');
+    gameOverScreen.classList.add('hidden');
+    bubbles = [];
+    selectedBubbles = [];
+    indicators = [];
+    score = 0;
+    scoreElement.innerText = score;
+    // Physical dimensions for clearing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
