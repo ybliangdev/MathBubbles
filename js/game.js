@@ -16,6 +16,7 @@ let matchesToNextLevel = 0;
 let timeLeft = 60;
 let timerMatches = 0;
 let slowEffectTimer = 0; // ms
+let gravityEffectTimer = 0; // ms
 
 const feedbackMessages = ["Good job!", "Great!", "Perfect!", "Fantastic!", "Amazing!", "Well done!"];
 
@@ -142,6 +143,18 @@ class Bubble {
         } else if (this.type === 'slow') {
             this.value = '❄️';
             this.color = 'rgba(6, 182, 212, 0.7)'; // Cyan
+        } else if (this.type === 'wildcard') {
+            this.value = '🌈';
+            this.color = 'rgba(255, 255, 255, 0.8)'; // Rainbow base
+        } else if (this.type === 'magnet') {
+            this.value = '🧲';
+            this.color = 'rgba(244, 63, 94, 0.7)'; // Rose/Red
+        } else if (this.type === 'swap') {
+            this.value = '🔄';
+            this.color = 'rgba(168, 85, 247, 0.7)'; // Purple/Violet
+        } else if (this.type === 'gravity') {
+            this.value = '🌌';
+            this.color = 'rgba(30, 27, 75, 0.8)'; // Dark Indigo/Black
         }
 
         this.speed = (Math.random() * 0.5 + 0.5) * gameSpeed;
@@ -168,6 +181,18 @@ class Bubble {
         } else if (this.type === 'slow') {
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#06b6d4';
+        } else if (this.type === 'wildcard') {
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#ffffff';
+        } else if (this.type === 'magnet') {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#f43f5e';
+        } else if (this.type === 'swap') {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#a855f7';
+        } else if (this.type === 'gravity') {
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#4338ca';
         } else {
             ctx.shadowBlur = 15;
             ctx.shadowColor = this.selected ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)';
@@ -209,7 +234,18 @@ class Bubble {
             return;
         }
         const speedMultiplier = (slowEffectTimer > 0) ? (2 / 3) : 1;
-        this.y -= this.speed * speedMultiplier;
+
+        if (gravityEffectTimer > 0) {
+            // Pull down effect
+            this.y += 3; // Move down faster than they usually move up
+            // Keep bubbles on screen (at the bottom)
+            const logicalHeight = canvas.offsetHeight;
+            if (this.y > logicalHeight + this.radius) {
+                this.y = logicalHeight + this.radius;
+            }
+        } else {
+            this.y -= this.speed * speedMultiplier;
+        }
 
         // Wobble effect
         this.x += Math.sin(this.y * 0.05) * 0.5;
@@ -273,6 +309,14 @@ function spawnBubble() {
         type = 'time';
     } else if (rand < 0.12) {
         type = 'slow';
+    } else if (rand < 0.135) {
+        type = 'wildcard'; // ~1.5%
+    } else if (rand < 0.15) {
+        type = 'magnet'; // ~1.5%
+    } else if (rand < 0.17) {
+        type = 'swap'; // ~2%
+    } else if (rand < 0.185) {
+        type = 'gravity'; // ~1.5%
     } else {
         // 50% chance to spawn a guaranteed match if target is high
         if (Math.random() < 0.5 && bubbles.length > 0) {
@@ -369,8 +413,63 @@ function handleClick(e) {
         }
         if (b.type === 'slow') {
             b.popping = true;
-            slowEffectTimer = 20000; // 20 seconds
+            slowEffectTimer = 15000; // 15 seconds
             showFeedback(b.x, b.y, "Slow Down! ❄️");
+            handleVibrate('success');
+            return;
+        }
+        if (b.type === 'wildcard') {
+            if (selectedBubbles.length === 1) {
+                b.popping = true;
+                const partner = selectedBubbles[0];
+                partner.popping = true;
+                score += 20;
+                scoreElement.innerText = score;
+                showFeedback(b.x, b.y, "Wildcard! 🌈");
+                selectedBubbles = [];
+                handleVibrate('match');
+                updateTarget();
+                return;
+            } else {
+                showFeedback(b.x, b.y, "Select one first!");
+                return;
+            }
+        }
+        if (b.type === 'magnet') {
+            if (selectedBubbles.length === 1) {
+                const partnerValue = currentTarget - selectedBubbles[0].value;
+                const match = bubbles.find(ob => ob.type === 'number' && !ob.popping && ob.value === partnerValue);
+                if (match) {
+                    b.popping = true;
+                    selectedBubbles[0].popping = true;
+                    match.popping = true;
+                    score += 30;
+                    scoreElement.innerText = score;
+                    showFeedback(b.x, b.y, "Magnet Pull! 🧲");
+                    selectedBubbles = [];
+                    handleVibrate('match');
+                    updateTarget();
+                    return;
+                } else {
+                    showFeedback(b.x, b.y, "No partner on board!");
+                    return;
+                }
+            } else {
+                showFeedback(b.x, b.y, "Select one first!");
+                return;
+            }
+        }
+        if (b.type === 'swap') {
+            b.popping = true;
+            updateTarget();
+            showFeedback(b.x, b.y, "Target Swapped! 🔄");
+            handleVibrate('success');
+            return;
+        }
+        if (b.type === 'gravity') {
+            b.popping = true;
+            gravityEffectTimer = 5000; // 5 seconds
+            showFeedback(b.x, b.y, "Gravity Well! 🌌");
             handleVibrate('success');
             return;
         }
@@ -475,6 +574,16 @@ function update(time) {
             gameContainer.classList.remove('slowed-active');
         } else {
             gameContainer.classList.add('slowed-active');
+        }
+    }
+
+    if (gravityEffectTimer > 0) {
+        gravityEffectTimer -= deltaTime;
+        if (gravityEffectTimer <= 0) {
+            gravityEffectTimer = 0;
+            gameContainer.classList.remove('gravity-active');
+        } else {
+            gameContainer.classList.add('gravity-active');
         }
     }
 
