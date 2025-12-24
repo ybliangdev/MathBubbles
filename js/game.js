@@ -634,8 +634,10 @@ function update(time) {
 
     // Timer Update for Timer Mode
     if (gameMode === 'timer' && time - lastTimeUpdate >= 1000) {
-        timeLeft--;
-        timerElement.innerText = timeLeft;
+        if (gravityEffectTimer <= 0) {
+            timeLeft--;
+            timerElement.innerText = timeLeft;
+        }
         lastTimeUpdate = time;
         if (timeLeft <= 0) {
             endGame();
