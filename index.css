@@ -83,8 +83,13 @@ body {
     gap: 8px;
 }
 
+.align-right {
+    align-items: flex-end;
+}
+
 #score-board,
-#target-board {
+#target-board,
+#timer-board {
     background: var(--glass);
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
@@ -156,6 +161,16 @@ button {
     box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
     transition: transform 0.2s, box-shadow 0.2s;
     width: 100%;
+}
+
+.secondary-btn {
+    background: linear-gradient(135deg, #10b981, #059669);
+    /* Green for Timer Mode? or just secondary */
+    box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+}
+
+.secondary-btn:hover {
+    box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
 }
 
 #exit-btn {

@@ -20,10 +20,13 @@
         <div id="ui-layer">
             <div class="ui-group">
                 <div id="score-board">Score: <span id="score">0</span></div>
-                <button id="pause-btn">Pause</button>
+                <div id="timer-board" class="hidden">Time: <span id="timer">60</span>s</div>
             </div>
             <div id="target-board">Target: <span id="target">10</span></div>
-            <button id="exit-btn">Exit</button>
+            <div class="ui-group align-right">
+                <button id="exit-btn">Exit</button>
+                <button id="pause-btn">Pause</button>
+            </div>
         </div>
         <canvas id="game-canvas"></canvas>
 
@@ -31,7 +34,8 @@
             <h1>Math BubblePop</h1>
             <p>Tap two numbers that add up to the <b>Target</b>!</p>
             <div class="button-group">
-                <button id="start-btn">Start Game</button>
+                <button id="start-btn">Level Mode</button>
+                <button id="timer-btn" class="secondary-btn">Timer Mode</button>
             </div>
         </div>
 

@@ -12,6 +12,8 @@ let lastTimeUpdate = 0;
 let indicators = [];
 let currentLevel = 1;
 let matchesToNextLevel = 0;
+let timeLeft = 60;
+let timerMatches = 0;
 
 const feedbackMessages = ["Good job!", "Great!", "Perfect!", "Fantastic!", "Amazing!", "Well done!"];
 
@@ -26,8 +28,11 @@ const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 const exitBtn = document.getElementById('exit-btn');
 const pauseBtn = document.getElementById('pause-btn');
+const timerBtn = document.getElementById('timer-btn');
 
 const targetElement = document.getElementById('target');
+const timerElement = document.getElementById('timer');
+const timerBoard = document.getElementById('timer-board');
 const bgLevel = document.getElementById('bg-level');
 const gameContainer = document.getElementById('game-container');
 
@@ -329,10 +334,15 @@ function handleClick(e) {
         // Bonus Bubble Logic: Pop immediately
         if (b.type === 'time') {
             b.popping = true;
-            // Time bonus converted to 20 points since timer is removed
-            score += 20;
-            scoreElement.innerText = score;
-            showFeedback(b.x, b.y, "+20 ✨");
+            if (gameMode === 'timer') {
+                timeLeft = Math.min(timeLeft + 10, 120); // +10s, max 120s
+                timerElement.innerText = timeLeft;
+                showFeedback(b.x, b.y, "+10s ⏰");
+            } else {
+                score += 20;
+                scoreElement.innerText = score;
+                showFeedback(b.x, b.y, "+20 ✨");
+            }
             handleVibrate('success');
             return;
         }
@@ -385,12 +395,21 @@ function handleClick(e) {
                 handleVibrate('match'); // Power-Up Slide for math match
 
                 // Level Progression
-                matchesToNextLevel++;
-                if (matchesToNextLevel >= 5 && currentLevel < 50) {
-                    currentLevel++;
-                    matchesToNextLevel = 0;
-                    updateBGColor();
-                    bgLevel.innerText = `L${currentLevel}`;
+                if (gameMode === 'level') {
+                    matchesToNextLevel++;
+                    if (matchesToNextLevel >= 5 && currentLevel < 50) {
+                        currentLevel++;
+                        matchesToNextLevel = 0;
+                        updateBGColor();
+                        bgLevel.innerText = `L${currentLevel}`;
+                    }
+                } else if (gameMode === 'timer') {
+                    timerMatches++;
+                    window.timerTotalMatches++;
+                    if (timerMatches >= 4) {
+                        timerMatches = 0;
+                        updateTarget(); // Scale target every 4 matches
+                    }
                 }
 
                 // Increase difficulty base (in addition to level speed jumps)
@@ -448,8 +467,11 @@ function update(time) {
         if (b.y < -b.radius && !b.popping) {
             b.popping = true;
             handleVibrate();
-            // Penalty starts at Level 25
-            if (currentLevel >= 25) {
+            // Penalty logic
+            if (gameMode === 'level' && currentLevel >= 25) {
+                score -= 1;
+                scoreElement.innerText = score;
+            } else if (gameMode === 'timer' && score > 150) {
                 score -= 1;
                 scoreElement.innerText = score;
             }
@@ -471,35 +493,55 @@ function update(time) {
         }
     }
 
+    // Timer Update for Timer Mode
+    if (gameMode === 'timer' && time - lastTimeUpdate >= 1000) {
+        timeLeft--;
+        timerElement.innerText = timeLeft;
+        lastTimeUpdate = time;
+        if (timeLeft <= 0) {
+            endGame();
+            return;
+        }
+    }
+
     requestAnimationFrame(update);
 }
 
 function updateTarget() {
     let min, max;
-    if (currentLevel === 1) {
-        min = 6; max = 12;
-    } else if (currentLevel === 2) {
-        min = 10; max = 20;
-    } else if (currentLevel === 3) {
-        min = 20; max = 25;
-    } else if (currentLevel === 4) {
-        min = 25; max = 30;
-    } else if (currentLevel === 5) {
-        min = 30; max = 35;
-    } else if (currentLevel === 6) {
-        min = 35; max = 40;
-    } else if (currentLevel < 12) {
-        // Levels 7-11: +5 per level
-        min = 40 + (currentLevel - 7) * 5;
-        max = min + 5;
-    } else if (currentLevel < 25) {
-        // Levels 12-24: +10 per level
-        min = 65 + (currentLevel - 12) * 10;
-        max = min + 10;
+    if (gameMode === 'level') {
+        if (currentLevel === 1) {
+            min = 6; max = 12;
+        } else if (currentLevel === 2) {
+            min = 10; max = 20;
+        } else if (currentLevel === 3) {
+            min = 20; max = 25;
+        } else if (currentLevel === 4) {
+            min = 25; max = 30;
+        } else if (currentLevel === 5) {
+            min = 30; max = 35;
+        } else if (currentLevel === 6) {
+            min = 35; max = 40;
+        } else if (currentLevel < 12) {
+            // Levels 7-11: +5 per level
+            min = 40 + (currentLevel - 7) * 5;
+            max = min + 5;
+        } else if (currentLevel < 25) {
+            // Levels 12-24: +10 per level
+            min = 65 + (currentLevel - 12) * 10;
+            max = min + 10;
+        } else {
+            // Levels 25+: +15 per level
+            min = 195 + (currentLevel - 25) * 15;
+            max = min + 15;
+        }
     } else {
-        // Levels 25+: +15 per level
-        min = 195 + (currentLevel - 25) * 15;
-        max = min + 15;
+        // Timer Mode
+        if (typeof window.timerTotalMatches === 'undefined') window.timerTotalMatches = 0;
+        const increments = Math.floor(window.timerTotalMatches / 4);
+        const step = score > 150 ? 15 : 10;
+        min = 10 + (increments * step);
+        max = 20 + (increments * step);
     }
 
     currentTarget = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -517,6 +559,9 @@ function startGame() {
     score = 0;
     currentLevel = 1;
     matchesToNextLevel = 0;
+    timerMatches = 0;
+    window.timerTotalMatches = 0;
+    timeLeft = 60;
     gameSpeed = 1;
     gamePaused = false;
     pauseBtn.innerText = 'Pause';
@@ -525,8 +570,17 @@ function startGame() {
     selectedBubbles = [];
     indicators = [];
     scoreElement.innerText = score;
-    bgLevel.classList.add('visible');
-    bgLevel.innerText = `L${currentLevel}`;
+
+    if (gameMode === 'level') {
+        bgLevel.classList.add('visible');
+        bgLevel.innerText = `L${currentLevel}`;
+        timerBoard.classList.add('hidden');
+    } else {
+        bgLevel.classList.remove('visible');
+        timerBoard.classList.remove('hidden');
+        timerElement.innerText = timeLeft;
+    }
+
     updateBGColor();
 
     updateTarget();
@@ -552,6 +606,7 @@ function saveScore(newScore, level) {
     const entry = {
         score: newScore,
         level: level,
+        mode: gameMode,
         date: new Date().toLocaleString()
     };
     history.unshift(entry);
@@ -566,10 +621,11 @@ function updateHistoryUI() {
     const history = JSON.parse(localStorage.getItem('math_bubble_scores')) || [];
     list.innerHTML = '';
 
-    // Calculate High Score (based on score, but showing level)
+    // Calculate High Score (based on score, but showing details)
     if (history.length > 0) {
         const bestEntry = history.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-        highScoreElement.innerText = `${bestEntry.score} (L${bestEntry.level || '?'})`;
+        const modeLabel = bestEntry.mode === 'timer' ? 'Timer' : `L${bestEntry.level || '?'}`;
+        highScoreElement.innerText = `${bestEntry.score} (${modeLabel})`;
     } else {
         highScoreElement.innerText = '0';
     }
@@ -577,12 +633,22 @@ function updateHistoryUI() {
     // Show top 10 on the UI to keep it clean, though 100 are saved
     history.slice(0, 10).forEach(entry => {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${entry.date}</span> <span>L${entry.level || '1'}</span> <b>${entry.score}</b>`;
+        const modeLabel = entry.mode === 'timer' ? 'Timer' : `L${entry.level || '1'}`;
+        li.innerHTML = `<span>${entry.date}</span> <span>${modeLabel}</span> <b>${entry.score}</b>`;
         list.appendChild(li);
     });
 }
 
-startBtn.addEventListener('click', startGame);
+startBtn.addEventListener('click', () => {
+    gameMode = 'level';
+    startGame();
+});
+
+timerBtn.addEventListener('click', () => {
+    gameMode = 'timer';
+    startGame();
+});
+
 restartBtn.addEventListener('click', startGame);
 
 exitBtn.addEventListener('click', () => {
