@@ -134,6 +134,12 @@ button {
     box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
 }
 
+.hard-btn {
+    background: linear-gradient(135deg, #f59e0b, #dc2626);
+    /* Orange/Red for Hard */
+    box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+}
+
 button:hover {
     transform: translateY(-3px);
     box-shadow: 0 15px 25px rgba(99, 102, 241, 0.4);
@@ -141,6 +147,10 @@ button:hover {
 
 .secondary-btn:hover {
     box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+}
+
+.hard-btn:hover {
+    box-shadow: 0 15px 25px rgba(220, 38, 38, 0.4);
 }
 
 .hidden {

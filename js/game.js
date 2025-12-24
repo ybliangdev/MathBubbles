@@ -21,6 +21,7 @@ const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const startBtn = document.getElementById('start-btn');
 const easyBtn = document.getElementById('easy-btn');
+const hardBtn = document.getElementById('hard-btn');
 const restartBtn = document.getElementById('restart-btn');
 
 const targetElement = document.getElementById('target');
@@ -106,7 +107,7 @@ const colors = [
 ];
 
 class Bubble {
-    constructor(type = 'number') {
+    constructor(type = 'number', forcedValue = null) {
         const logicalWidth = canvas.offsetWidth;
         const logicalHeight = canvas.offsetHeight;
 
@@ -116,7 +117,7 @@ class Bubble {
         this.y = logicalHeight + this.radius;
 
         if (this.type === 'number') {
-            this.value = Math.floor(Math.random() * (currentTarget - 1)) + 1;
+            this.value = forcedValue !== null ? forcedValue : Math.floor(Math.random() * (currentTarget - 1)) + 1;
             this.color = colors[Math.floor(Math.random() * colors.length)];
         } else if (this.type === 'time') {
             this.value = '⏰';
@@ -243,6 +244,8 @@ resize();
 function spawnBubble() {
     const logicalWidth = canvas.offsetWidth;
     let type = 'number';
+    let forcedValue = null;
+
     const rand = Math.random();
     if (rand < 0.02) {
         type = 'star';
@@ -250,9 +253,18 @@ function spawnBubble() {
         type = 'bomb';
     } else if (rand < 0.10) {
         type = 'time';
+    } else {
+        // 50% chance to spawn a guaranteed match if target is high
+        if (Math.random() < 0.5 && bubbles.length > 0) {
+            const numericBubbles = bubbles.filter(b => b.type === 'number' && !b.popping && b.value < currentTarget);
+            if (numericBubbles.length > 0) {
+                const partner = numericBubbles[Math.floor(Math.random() * numericBubbles.length)];
+                forcedValue = currentTarget - partner.value;
+            }
+        }
     }
 
-    const newBubble = new Bubble(type);
+    const newBubble = new Bubble(type, forcedValue);
 
     // Simple anti-overlap on spawn: if too close to last few bubbles, nudge it
     const lastFew = bubbles.slice(-3);
@@ -416,6 +428,10 @@ function update(time) {
         if (b.y < -b.radius && !b.popping) {
             b.popping = true;
             handleVibrate();
+            if (gameMode === 'hard') {
+                score -= 1;
+                scoreElement.innerText = score;
+            }
         }
 
         // Remove popped or off-screen
@@ -451,6 +467,8 @@ function update(time) {
 function updateTarget() {
     if (gameMode === 'easy') {
         currentTarget = Math.floor(Math.random() * 7) + 10; // 10-16
+    } else if (gameMode === 'hard') {
+        currentTarget = Math.floor(Math.random() * 71) + 30; // 30-100
     } else {
         if (score > 100) {
             currentTarget = Math.floor(Math.random() * 31) + 30; // 30-60
@@ -471,7 +489,7 @@ function startGame() {
     initAudio(); // Unlock audio on game start
     score = 0;
     timeLeft = 60;
-    gameSpeed = 1;
+    gameSpeed = gameMode === 'hard' ? 1.5 : 1;
     spawnRate = 1500;
     bubbles = [];
     selectedBubbles = [];
@@ -536,6 +554,11 @@ startBtn.addEventListener('click', () => {
 
 easyBtn.addEventListener('click', () => {
     gameMode = 'easy';
+    startGame();
+});
+
+hardBtn.addEventListener('click', () => {
+    gameMode = 'hard';
     startGame();
 });
 

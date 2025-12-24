@@ -1,4 +1,4 @@
-const CACHE_NAME = 'math-bubble-v19';
+const CACHE_NAME = 'math-bubble-v23';
 const ASSETS = [
     './',
     './index.html',
