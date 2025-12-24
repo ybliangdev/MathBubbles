@@ -7,7 +7,7 @@ let selectedBubbles = [];
 let spawnRate = 1500; // ms
 let lastSpawn = 0;
 let gameSpeed = 1;
-let timeLeft = 60;
+let gamePaused = false;
 let lastTimeUpdate = 0;
 let indicators = [];
 let currentLevel = 1;
@@ -19,16 +19,15 @@ const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('score');
 const finalScoreElement = document.getElementById('final-score');
+const finalLevelElement = document.getElementById('final-level');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const startBtn = document.getElementById('start-btn');
-const easyBtn = document.getElementById('easy-btn');
-const hardBtn = document.getElementById('hard-btn');
 const restartBtn = document.getElementById('restart-btn');
 const exitBtn = document.getElementById('exit-btn');
+const pauseBtn = document.getElementById('pause-btn');
 
 const targetElement = document.getElementById('target');
-const timerElement = document.getElementById('timer');
 const bgLevel = document.getElementById('bg-level');
 const gameContainer = document.getElementById('game-container');
 
@@ -330,9 +329,10 @@ function handleClick(e) {
         // Bonus Bubble Logic: Pop immediately
         if (b.type === 'time') {
             b.popping = true;
-            timeLeft = Math.min(timeLeft + 10, 120); // Bonus +10s, max 120s
-            timerElement.innerText = timeLeft;
-            showFeedback(b.x, b.y, "+10s ⏰");
+            // Time bonus converted to 20 points since timer is removed
+            score += 20;
+            scoreElement.innerText = score;
+            showFeedback(b.x, b.y, "+20 ✨");
             handleVibrate('success');
             return;
         }
@@ -384,19 +384,17 @@ function handleClick(e) {
                 selectedBubbles = [];
                 handleVibrate('match'); // Power-Up Slide for math match
 
-                // Level Progression for Easy Mode
-                if (gameMode === 'easy') {
-                    matchesToNextLevel++;
-                    if (matchesToNextLevel >= 5 && currentLevel < 12) {
-                        currentLevel++;
-                        matchesToNextLevel = 0;
-                        updateBGColor();
-                        bgLevel.innerText = `L${currentLevel}`;
-                    }
+                // Level Progression
+                matchesToNextLevel++;
+                if (matchesToNextLevel >= 5 && currentLevel < 50) {
+                    currentLevel++;
+                    matchesToNextLevel = 0;
+                    updateBGColor();
+                    bgLevel.innerText = `L${currentLevel}`;
                 }
 
-                // Increase difficulty
-                gameSpeed += 0.02;
+                // Increase difficulty base (in addition to level speed jumps)
+                gameSpeed += 0.01;
 
                 // Change target on every match
                 updateTarget();
@@ -425,6 +423,12 @@ function showFeedback(x, y, customMsg = null) {
 function update(time) {
     if (!gameActive) return;
 
+    if (gamePaused) {
+        lastSpawn = time - (lastSpawn ? (time - lastSpawn) : 0); // Keep spawn timing consistent
+        requestAnimationFrame(update);
+        return;
+    }
+
     // Use physical dimensions for clearing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -444,7 +448,8 @@ function update(time) {
         if (b.y < -b.radius && !b.popping) {
             b.popping = true;
             handleVibrate();
-            if (gameMode === 'hard') {
+            // Penalty starts at Level 25
+            if (currentLevel >= 25) {
                 score -= 1;
                 scoreElement.innerText = score;
             }
@@ -466,37 +471,38 @@ function update(time) {
         }
     }
 
-    // Timer Update - outside bubble loop
-    if (time - lastTimeUpdate >= 1000) {
-        timeLeft--;
-        timerElement.innerText = timeLeft;
-        lastTimeUpdate = time;
-        if (timeLeft <= 0) {
-            endGame();
-            return;
-        }
-    }
-
     requestAnimationFrame(update);
 }
 
 function updateTarget() {
-    if (gameMode === 'easy') {
-        const ranges = [
-            [6, 12], [10, 20], [20, 25], [25, 30], [30, 35], [35, 40],
-            [40, 45], [45, 50], [50, 55], [55, 60], [60, 65], [65, 70]
-        ];
-        const [min, max] = ranges[currentLevel - 1] || [10, 16];
-        currentTarget = Math.floor(Math.random() * (max - min + 1)) + min;
-    } else if (gameMode === 'hard') {
-        currentTarget = Math.floor(Math.random() * 71) + 30; // 30-100
+    let min, max;
+    if (currentLevel === 1) {
+        min = 6; max = 12;
+    } else if (currentLevel === 2) {
+        min = 10; max = 20;
+    } else if (currentLevel === 3) {
+        min = 20; max = 25;
+    } else if (currentLevel === 4) {
+        min = 25; max = 30;
+    } else if (currentLevel === 5) {
+        min = 30; max = 35;
+    } else if (currentLevel === 6) {
+        min = 35; max = 40;
+    } else if (currentLevel < 12) {
+        // Levels 7-11: +5 per level
+        min = 40 + (currentLevel - 7) * 5;
+        max = min + 5;
+    } else if (currentLevel < 25) {
+        // Levels 12-24: +10 per level
+        min = 65 + (currentLevel - 12) * 10;
+        max = min + 10;
     } else {
-        if (score > 100) {
-            currentTarget = Math.floor(Math.random() * 31) + 30; // 30-60
-        } else {
-            currentTarget = Math.floor(Math.random() * 21) + 10; // 10-30
-        }
+        // Levels 25+: +15 per level
+        min = 195 + (currentLevel - 25) * 15;
+        max = min + 15;
     }
+
+    currentTarget = Math.floor(Math.random() * (max - min + 1)) + min;
     targetElement.innerText = currentTarget;
 
     // Pulse animation for target change
@@ -509,23 +515,18 @@ function updateTarget() {
 function startGame() {
     initAudio(); // Unlock audio on game start
     score = 0;
-    timeLeft = 60;
     currentLevel = 1;
     matchesToNextLevel = 0;
-    gameSpeed = gameMode === 'hard' ? 1.5 : 1;
+    gameSpeed = 1;
+    gamePaused = false;
+    pauseBtn.innerText = 'Pause';
     spawnRate = 1500;
     bubbles = [];
     selectedBubbles = [];
     indicators = [];
     scoreElement.innerText = score;
-    timerElement.innerText = timeLeft;
-
-    if (gameMode === 'easy') {
-        bgLevel.classList.add('visible');
-        bgLevel.innerText = `L${currentLevel}`;
-    } else {
-        bgLevel.classList.remove('visible');
-    }
+    bgLevel.classList.add('visible');
+    bgLevel.innerText = `L${currentLevel}`;
     updateBGColor();
 
     updateTarget();
@@ -540,15 +541,17 @@ function startGame() {
 function endGame() {
     gameActive = false;
     finalScoreElement.innerText = score;
-    saveScore(score);
+    finalLevelElement.innerText = currentLevel;
+    saveScore(score, currentLevel);
     updateHistoryUI();
     gameOverScreen.classList.remove('hidden');
 }
 
-function saveScore(newScore) {
+function saveScore(newScore, level) {
     let history = JSON.parse(localStorage.getItem('math_bubble_scores')) || [];
     const entry = {
         score: newScore,
+        level: level,
         date: new Date().toLocaleString()
     };
     history.unshift(entry);
@@ -563,10 +566,10 @@ function updateHistoryUI() {
     const history = JSON.parse(localStorage.getItem('math_bubble_scores')) || [];
     list.innerHTML = '';
 
-    // Calculate High Score
+    // Calculate High Score (based on score, but showing level)
     if (history.length > 0) {
-        const highScore = Math.max(...history.map(h => h.score));
-        highScoreElement.innerText = highScore;
+        const bestEntry = history.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+        highScoreElement.innerText = `${bestEntry.score} (L${bestEntry.level || '?'})`;
     } else {
         highScoreElement.innerText = '0';
     }
@@ -574,30 +577,17 @@ function updateHistoryUI() {
     // Show top 10 on the UI to keep it clean, though 100 are saved
     history.slice(0, 10).forEach(entry => {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${entry.date}</span> <b>${entry.score}</b>`;
+        li.innerHTML = `<span>${entry.date}</span> <span>L${entry.level || '1'}</span> <b>${entry.score}</b>`;
         list.appendChild(li);
     });
 }
 
-startBtn.addEventListener('click', () => {
-    gameMode = 'normal';
-    startGame();
-});
-
-easyBtn.addEventListener('click', () => {
-    gameMode = 'easy';
-    startGame();
-});
-
-hardBtn.addEventListener('click', () => {
-    gameMode = 'hard';
-    startGame();
-});
-
+startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', startGame);
 
 exitBtn.addEventListener('click', () => {
     gameActive = false;
+    gamePaused = false;
     startScreen.classList.remove('hidden');
     gameOverScreen.classList.add('hidden');
     bubbles = [];
@@ -609,13 +599,22 @@ exitBtn.addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
+pauseBtn.addEventListener('click', () => {
+    if (!gameActive) return;
+    gamePaused = !gamePaused;
+    pauseBtn.innerText = gamePaused ? 'Resume' : 'Pause';
+});
+
 function updateBGColor() {
-    if (gameMode === 'easy') {
-        // Shift from Blue/Indigo to Red as level increases
-        // L1 (Indigo/Blue): h=230, L12 (Red): h=0
-        const hue = Math.max(0, 230 - (currentLevel - 1) * 21);
-        gameContainer.style.background = `radial-gradient(circle at top right, hsl(${hue}, 40%, 30%), #0f172a)`;
-    } else {
-        gameContainer.style.background = `radial-gradient(circle at top right, #1e293b, #0f172a)`;
+    // Shift from Blue/Indigo to Red as level increases
+    // L1: h=230, L50: h=0
+    const hue = Math.max(0, 230 - (currentLevel - 1) * 4.7);
+    gameContainer.style.background = `radial-gradient(circle at top right, hsl(${hue}, 40%, 30%), #0f172a)`;
+
+    // Jump speed at thresholds (approx 1/3 increase of base speed)
+    if (currentLevel === 12 && matchesToNextLevel === 0) {
+        gameSpeed += 0.33;
+    } else if (currentLevel === 25 && matchesToNextLevel === 0) {
+        gameSpeed += 0.33;
     }
 }

@@ -20,7 +20,7 @@
         <div id="ui-layer">
             <div class="ui-group">
                 <div id="score-board">Score: <span id="score">0</span></div>
-                <div id="timer-board">Time: <span id="timer">60</span>s</div>
+                <button id="pause-btn">Pause</button>
             </div>
             <div id="target-board">Target: <span id="target">10</span></div>
             <button id="exit-btn">Exit</button>
@@ -31,15 +31,14 @@
             <h1>Math BubblePop</h1>
             <p>Tap two numbers that add up to the <b>Target</b>!</p>
             <div class="button-group">
-                <button id="start-btn">Normal</button>
-                <button id="easy-btn" class="secondary-btn">Easy</button>
-                <button id="hard-btn" class="hard-btn">Hard</button>
+                <button id="start-btn">Start Game</button>
             </div>
         </div>
 
         <div id="game-over-screen" class="overlay hidden">
             <h1>Game Over</h1>
             <p>Final Score: <span id="final-score">0</span></p>
+            <p>Level Reached: <span id="final-level">1</span></p>
             <div id="history-container">
                 <div id="high-score-banner">🏆 High Score: <span id="high-score">0</span> 🏆</div>
                 <h3>Last Scores</h3>
