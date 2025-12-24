@@ -271,7 +271,7 @@ function spawnBubble() {
         type = 'bomb';
     } else if (rand < 0.10) {
         type = 'time';
-    } else if (rand < 0.14) {
+    } else if (rand < 0.12) {
         type = 'slow';
     } else {
         // 50% chance to spawn a guaranteed match if target is high
